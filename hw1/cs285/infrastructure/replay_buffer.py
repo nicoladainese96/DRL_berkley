@@ -76,9 +76,16 @@ class ReplayBuffer(object):
         ## HINT 1: use np.random.permutation to sample random indices
         ## HINT 2: return corresponding data points from each array (i.e., not different indices from each array)
         ## HINT 3: look at the sample_recent_data function below
-
-        return TODO, TODO, TODO, TODO, TODO
-
+        stored_traj = self.obs.shape[0] # this should be the number of total trajectories in the rb
+        permuted_idx = np.random.permutation(np.arange(stored_traj))
+        selected_idx = permuted_idx[:batch_size] # keep the first batch_size random indices 
+        return (
+            self.obs[selected_idx],
+            self.acs[selected_idx],
+            self.rews[selected_idx],
+            self.next_obs[selected_idx],
+            self.terminals[selected_idx],
+        )
     def sample_recent_data(self, batch_size=1):
         return (
             self.obs[-batch_size:],

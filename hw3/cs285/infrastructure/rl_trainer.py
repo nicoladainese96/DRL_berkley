@@ -162,9 +162,10 @@ class RL_Trainer(object):
                 train_video_paths = None
                 paths = None
             else:
+                print('porco dio')
                 use_batchsize = self.params['batch_size']
-                if itr==0:
-                    use_batchsize = self.params['batch_size_initial']
+                #if itr==0:
+                #    use_batchsize = self.params['batch_size_initial']
                 paths, envsteps_this_batch, train_video_paths = (
                     self.collect_training_trajectories(
                         itr, initial_expertdata, collect_policy, use_batchsize)
@@ -174,6 +175,7 @@ class RL_Trainer(object):
 
             # relabel the collected obs with actions from a provided expert policy
             if relabel_with_expert and itr>=start_relabel_with_expert:
+                print('porco dio due volte')
                 paths = self.do_relabel_with_expert(expert_policy, paths)
 
             # add collected data to replay buffer
@@ -210,12 +212,40 @@ class RL_Trainer(object):
             envsteps_this_batch: the sum over the numbers of environment steps in paths
             train_video_paths: paths which also contain videos for visualization purposes
         """
-        # TODO: get this from hw1 or hw2
+        print("\nCollecting data to be used for training...")
+        # I'm guessing num_transitions_to_sample = batch_size in previous assignment?
+        paths, envsteps_this_batch = utils.sample_trajectories(
+            self.env, 
+            collect_policy, 
+            num_transitions_to_sample,
+            #self.params['batch_size'], 
+            self.params['ep_len']
+        )
+
+        train_video_paths = None
+
+        return paths, envsteps_this_batch, train_video_paths
+
 
         return paths, envsteps_this_batch, train_video_paths
 
     def train_agent(self):
-        # TODO: get this from hw1 or hw2
+        #print('\nTraining agent using sampled data from replay buffer...')
+        all_logs = []
+        for train_step in range(self.params['num_agent_train_steps_per_iter']):
+
+            # TODO sample some data from the data buffer
+            # HINT1: use the agent's sample function
+            # HINT2: how much data = self.params['train_batch_size']
+            ob_batch, ac_batch, re_batch, next_ob_batch, terminal_batch = self.agent.sample(self.params['train_batch_size'])
+
+            # TODO use the sampled data to train an agent
+            # HINT: use the agent's train function
+            # HINT: keep the agent's training log for debugging
+            train_log = self.agent.train(ob_batch, ac_batch, re_batch, next_ob_batch, terminal_batch)
+            all_logs.append(train_log)
+        return all_logs
+
 
     ####################################
     ####################################

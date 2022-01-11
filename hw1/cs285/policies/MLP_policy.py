@@ -79,13 +79,50 @@ class MLPPolicy(BasePolicy, nn.Module, metaclass=abc.ABCMeta):
             observation = obs
         else:
             observation = obs[None]
-
+        obs = ptu.from_numpy(observation.astype(np.float32))
         # TODO return the action that the policy prescribes
-        raise NotImplementedError
+        if self.discrete:
+            logits = self.forward(obs)
+            actions = distributions.Categorical(logits=logits).sample()
+            #print("actions.shape: ", actions.shape)
+            return ptu.to_numpy(actions)
+        else:
+            # shapes here will be fucked up
+            mean = self.forward(obs)
+            #print("mean.shape: ", mean.shape)
+            gaussian_policy = distributions.Normal(loc=mean, scale=torch.exp(self.logstd))
+            actions = gaussian_policy.sample()
+
+            # reparametrization trick, not really needed...
+            #actions = mean + noise*torch.exp(self.logstd.reshape(mean.shape))
+            #print("actions.shape: ", actions.shape)
+            return ptu.to_numpy(actions)
 
     # update/train this policy
     def update(self, observations, actions, **kwargs):
-        raise NotImplementedError
+        # in both cases use the forward
+        #print('observations.dtype: ', observations.dtype )
+        #print('actions.dtype: ', actions.dtype )
+        obs = ptu.from_numpy(observations.astype(np.float32))
+        actions = ptu.from_numpy(actions)
+        #print('update time...')
+        #print('self.discrete ', self.discrete)
+        if self.discrete:
+            logits = self.forward(obs)
+            # if discrete compute the CrossEntropyLoss
+            loss = nn.CrossEntropyLoss()(logits, actions)
+        else:
+            # if not, compute the NLLLoss
+            mean = self.forward(obs)
+            gaussian_policy = distributions.Normal(loc=mean, scale=torch.exp(self.logstd))
+            nll = - gaussian_policy.log_prob(actions)
+            loss = nll.mean()
+
+        self.optimizer.zero_grad()
+        loss.backward()
+        self.optimizer.step()
+
+        return loss
 
     # This function defines the forward pass of the network.
     # You can return anything you want, but you should be able to differentiate
@@ -93,7 +130,12 @@ class MLPPolicy(BasePolicy, nn.Module, metaclass=abc.ABCMeta):
     # return more flexible objects, such as a
     # `torch.distributions.Distribution` object. It's up to you!
     def forward(self, observation: torch.FloatTensor) -> Any:
-        raise NotImplementedError
+        if self.discrete:
+            logits = self.logits_na(observation)
+            return logits
+        else:
+            mean = self.mean_net(observation)
+            return mean
 
 
 #####################################################
@@ -109,7 +151,8 @@ class MLPPolicySL(MLPPolicy):
             adv_n=None, acs_labels_na=None, qvals=None
     ):
         # TODO: update the policy and return the loss
-        loss = TODO
+        loss = super().update(observations, actions)
+        #print('loss:', loss)
         return {
             # You can add extra logging information here, but keep this line
             'Training Loss': ptu.to_numpy(loss),

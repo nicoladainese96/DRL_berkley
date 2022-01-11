@@ -42,7 +42,7 @@ def get_env_kwargs(env_name):
             'learning_starts': 50000,
             'target_update_freq': 10000,
             'replay_buffer_size': int(1e6),
-            'num_timesteps': int(2e8),
+            'num_timesteps': int(1e6),#int(2e8),
             'q_func': create_atari_q_network,
             'learning_freq': 4,
             'grad_norm_clipping': 10,
@@ -53,6 +53,7 @@ def get_env_kwargs(env_name):
         }
         kwargs['optimizer_spec'] = atari_optimizer(kwargs['num_timesteps'])
         kwargs['exploration_schedule'] = atari_exploration_schedule(kwargs['num_timesteps'])
+
 
     elif env_name == 'LunarLander-v3':
         def lunar_empty_wrapper(env):
@@ -123,7 +124,7 @@ def atari_exploration_schedule(num_timesteps):
         [
             (0, 1.0),
             (1e6, 0.1),
-            (num_timesteps / 8, 0.01),
+            #(num_timesteps / 8, 0.01),
         ], outside_value=0.01
     )
 
